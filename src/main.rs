@@ -169,6 +169,7 @@ impl App {
                 for i in 0..self.db.data.len() {
                     if self.db.data[i] == e {
                         self.db.data.remove(i);
+                        break;
                     }
                 }
             }
@@ -299,12 +300,9 @@ impl App {
     }
 
     fn theme(&self) -> Theme {
-        let themes = Theme::ALL;
-        let max = themes.len();
         Theme::Dark
     }
 }
-
 impl Default for App {
     fn default() -> Self {
         Self::new().0

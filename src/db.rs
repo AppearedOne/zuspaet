@@ -89,6 +89,29 @@ impl DataBase {
         tupples.sort_by(|e1, e2| e2.1.cmp(&e1.1));
         tupples
     }
+    /*pub fn average_delay_time(&self) -> Vec<(Lesson, i32)> {
+        let mut tupples: Vec<(Lesson, i32, i32)> = Lesson::all()
+            .into_iter()
+            .map(|n: Lesson| (n, 0, 0))
+            .collect();
+        for entry in &self.data {
+            let entry_type = entry.lesson.clone();
+            for l in &mut tupples {
+                if l.0.eq(&entry_type) {
+                    l.1 += entry.delay_min as i32;
+                    l.2 += 1;
+                    break;
+                }
+            }
+        }
+        for l in &mut tupples {
+            if l.2 == 0 {
+                continue;
+            }
+            l.1 /= l.2;
+        }
+        return tupples.into_iter().map(|n: Lesson, m, i| (n, m));
+    }*/
 }
 
 impl std::fmt::Display for Class {
