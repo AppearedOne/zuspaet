@@ -76,6 +76,14 @@ impl DataBase {
         tupples.sort_by(|e1, e2| e2.1.cmp(&e1.1));
         tupples
     }
+
+    pub fn average_delay(&self) -> f32 {
+        if self.data.is_empty() {
+            return 0.0;
+        }
+        let sum: u32 = self.data.iter().map(|x| x.delay_min).sum();
+        sum as f32 / self.data.len() as f32
+    }
     pub fn ranking_vec_lesson(&self) -> Vec<(Lesson, i32)> {
         let mut tupples: Vec<(Lesson, i32)> =
             Lesson::all().into_iter().map(|n: Lesson| (n, 0)).collect();
