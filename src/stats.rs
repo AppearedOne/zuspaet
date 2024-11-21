@@ -11,11 +11,13 @@ pub fn stats_view(app: &App) -> Element<Message> {
     let mut ranking =
         column![text("Verspätungen pro Person").style(text::danger)].align_x(Alignment::Start);
     for (i, p) in app.db.ranking_vec().into_iter().enumerate() {
+        let percent: f32 = (p.1 as f32 / app.db.data.len() as f32 * 100.0).round();
         ranking = ranking.push(
             row![
                 text(format!("{}.", i + 1)),
                 text(p.0.to_string()),
-                text(p.1.to_string())
+                text(p.1.to_string()),
+                text(format!("- {}%", percent))
             ]
             .spacing(5)
             .align_y(Alignment::Start),
@@ -24,11 +26,13 @@ pub fn stats_view(app: &App) -> Element<Message> {
     let mut ranking_l =
         column![text("Verspätungen pro Lektion").style(text::danger)].align_x(Alignment::Start);
     for (i, p) in app.db.ranking_vec_lesson().into_iter().enumerate() {
+        let percent: f32 = (p.1 as f32 / app.db.data.len() as f32 * 100.0).round();
         ranking_l = ranking_l.push(
             row![
                 text(format!("{}.", i + 1)).style(text::success),
                 text(p.0.to_string()).style(text::success),
-                text(p.1.to_string()).style(text::success)
+                text(p.1.to_string()).style(text::success),
+                text(format!(" {}%", percent))
             ]
             .spacing(5)
             .align_y(Alignment::Start),
@@ -43,15 +47,20 @@ pub fn stats_view(app: &App) -> Element<Message> {
         "Maximum: {}",
         app.db.data.iter().map(|x| x.delay_min).max().unwrap()
     ));
+    let total = text(format!("Total: {}", app.db.data.len()));
+    let first_percent = (text(format!(
+        "Erste Lektion des Tages: {}%",
+        app.db.get_percent_first_lesson()
+    )));
     row![column![
         button("Zurück").on_press(Message::GoView(ViewControl::MAIN)),
         row![
             ranking.align_x(Alignment::Start),
             ranking_l.align_x(Alignment::Start),
-            column![avg, min, max].spacing(10)
+            column![avg, min, max, total, first_percent].spacing(10)
         ]
-        .spacing(10)
-        .align_y(Alignment::Center)
+        .spacing(30)
+        .align_y(Alignment::Start)
     ]
     .padding(5)
     .width(Length::Fill)

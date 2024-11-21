@@ -77,6 +77,19 @@ impl DataBase {
         tupples
     }
 
+    pub fn get_percent_first_lesson(&self) -> i32 {
+        let num: f32 = {
+            let mut count = 0.0;
+            for v in &self.data {
+                if v.first_lesson {
+                    count += 1.0;
+                }
+            }
+            count
+        };
+        (num / self.data.len() as f32 * 100.0).round() as i32
+    }
+
     pub fn average_delay(&self) -> f32 {
         if self.data.is_empty() {
             return 0.0;
