@@ -43,6 +43,7 @@ pub fn stats_view(app: &App) -> Element<Message> {
         "Minimum: {}",
         app.db.data.iter().map(|x| x.delay_min).min().unwrap()
     ));
+    let sum_min = text(format!("Summe (min): {}", app.db.sum_min()));
     let max = text(format!(
         "Maximum: {}",
         app.db.data.iter().map(|x| x.delay_min).max().unwrap()
@@ -55,9 +56,9 @@ pub fn stats_view(app: &App) -> Element<Message> {
     row![column![
         button("Zurück").on_press(Message::GoView(ViewControl::MAIN)),
         row![
-            ranking.align_x(Alignment::Start),
-            ranking_l.align_x(Alignment::Start),
-            column![avg, min, max, total, first_percent].spacing(10)
+            ranking.align_x(Alignment::Start).spacing(5),
+            ranking_l.align_x(Alignment::Start).spacing(5),
+            column![avg, min, max, total, first_percent, sum_min].spacing(10)
         ]
         .spacing(30)
         .align_y(Alignment::Start)

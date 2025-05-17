@@ -97,6 +97,13 @@ impl DataBase {
         let sum: u32 = self.data.iter().map(|x| x.delay_min).sum();
         sum as f32 / self.data.len() as f32
     }
+    pub fn sum_min(&self) -> u32 {
+        if self.data.is_empty() {
+            return 0;
+        }
+        let sum: u32 = self.data.iter().map(|x| x.delay_min).sum();
+        return sum;
+    }
     pub fn ranking_vec_lesson(&self) -> Vec<(Lesson, i32)> {
         let mut tupples: Vec<(Lesson, i32)> =
             Lesson::all().into_iter().map(|n: Lesson| (n, 0)).collect();

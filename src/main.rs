@@ -9,6 +9,7 @@ use iced::window;
 use iced::{alignment, Alignment, Element, Font, Length, Padding, Subscription, Task, Theme};
 
 pub mod db;
+pub mod settings;
 pub mod stats;
 pub mod time;
 
@@ -32,18 +33,18 @@ fn main() -> iced::Result {
         .run_with(|| {
             (
                 App::new().0,
-                Task::perform(db::DataBase::load_file("db.json"), Message::DBLoaded),
+                Task::perform(db::DataBase::load_file("db.json"), Message::DBLoaded).chain(
+                    Task::perform(
+                        settings::load_from_file("settings.json"),
+                        Message::SettingsLoaded,
+                    ),
+                ),
             )
         })
 }
-
-#[cfg(target_arch = "wasm32")]
-fn main() -> iced::Result {
-    iced::application(App::title, App::update, App::view)
-        .theme(App::theme)
-        .subscription(App::subscription)
-        .exit_on_close_request(false)
-        .run()
+async fn save_all(db: db::DataBase, sets: settings::Settings) -> Result<(), db::DataBaseError> {
+    settings::save_to_file(sets, "settings.json").await;
+    return db.save_file("db.json".to_string()).await;
 }
 
 #[derive(Debug, Clone)]
@@ -51,6 +52,7 @@ pub enum ViewControl {
     ADD,
     MAIN,
     STATS,
+    SETTINGS,
 }
 
 pub struct App {
@@ -63,6 +65,8 @@ pub struct App {
     combo2: combo_box::State<Lesson>,
     sel_lesson: Option<Lesson>,
     status_text: String,
+    theme_state: combo_box::State<Theme>,
+    selected_theme: Option<Theme>,
 }
 
 #[derive(Debug, Clone)]
@@ -83,6 +87,8 @@ pub enum Message {
     LastLessonTime,
     NextLessonTime,
     Edit,
+    ThemeSelected(Theme),
+    SettingsLoaded(settings::Settings),
 }
 
 impl App {
@@ -97,12 +103,14 @@ impl App {
                 combo2: combo_box::State::new(db::Lesson::all()),
                 sel_lesson: None,
                 status_text: String::new(),
+                theme_state: combo_box::State::new(Theme::ALL.to_vec()),
+                selected_theme: None,
             },
             Task::none(),
         )
     }
     fn title(&self) -> String {
-        String::from("Verspätungsmanager4000 Ultra Pro Max")
+        String::from("Verspätungsmanager4001 Ultra Pro Max")
     }
     fn subscription(&self) -> Subscription<Message> {
         event::listen().map(Message::EventOccurred)
@@ -118,10 +126,18 @@ impl App {
             },
             Message::EventOccurred(event) => {
                 if let Event::Window(window::Event::CloseRequested) = event {
-                    return Task::perform(
+                    let mut sets = settings::Settings::new();
+                    match self.selected_theme.clone() {
+                        Some(theme) => {
+                            sets.theme = theme.to_string();
+                        }
+                        None => (),
+                    }
+                    /*return Task::perform(
                         self.db.clone().save_file("db.json".to_string()),
                         Message::Exit,
-                    );
+                    );*/
+                    return Task::perform(save_all(self.db.clone(), sets), Message::Exit);
                 }
                 return Task::none();
             }
@@ -180,6 +196,10 @@ impl App {
                 self.add_entry.lesson_time = time::get_next_lesson(self.add_entry.lesson_time);
             }
             Message::Edit => {}
+            Message::ThemeSelected(t) => self.selected_theme = Some(t),
+            Message::SettingsLoaded(sets) => {
+                self.selected_theme = settings::string_to_theme(&sets.theme);
+            }
         }
         Task::none()
     }
@@ -277,12 +297,13 @@ impl App {
                     ]);
                 }
                 row![column![
-                    text("Verspätungsmanager4000 Ultra Pro Max").size(30),
+                    text("Verspätungsmanager4000 Ultra Pro Max").size(20),
                     //text(format!("{}", std::env::current_dir().unwrap().display())),
                     text(self.status_text.clone()).style(text::danger),
                     row![
                         button("Neuer Eintrag").on_press(Message::Add),
-                        button("Statistik").on_press(Message::GoView(ViewControl::STATS))
+                        button("Statistik").on_press(Message::GoView(ViewControl::STATS)),
+                        button("Einstellungen").on_press(Message::GoView(ViewControl::SETTINGS))
                     ]
                     .padding(5)
                     .spacing(5),
@@ -296,11 +317,15 @@ impl App {
                 .into()
             }
             ViewControl::STATS => stats::stats_view(self),
+            ViewControl::SETTINGS => settings::settings_view(self),
         }
     }
 
     fn theme(&self) -> Theme {
-        Theme::Dark
+        match &self.selected_theme {
+            Some(theme) => theme.clone(),
+            None => Theme::KanagawaDragon,
+        }
     }
 }
 impl Default for App {
