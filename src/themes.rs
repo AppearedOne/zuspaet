@@ -1,3 +1,4 @@
+use crate::{Message, ICON_FONT};
 use iced::border::Radius;
 use iced::gradient;
 use iced::widget::{
@@ -9,6 +10,8 @@ use iced::{
     Padding, Task, Theme,
 };
 
+use crate::bootstrap::{icon_to_string, Bootstrap};
+
 pub fn text_fg(theme: &Theme) -> text::Style {
     text::Style {
         color: Some(theme.extended_palette().primary.strong.color),
@@ -18,6 +21,12 @@ pub fn text_fg(theme: &Theme) -> text::Style {
 pub fn text_fg_succes(theme: &Theme) -> text::Style {
     text::Style {
         color: Some(theme.extended_palette().success.strong.color),
+    }
+}
+
+pub fn text_fg_sec(theme: &Theme) -> text::Style {
+    text::Style {
+        color: Some(theme.extended_palette().secondary.strong.color),
     }
 }
 
@@ -154,4 +163,60 @@ pub fn round_button(theme: &Theme, status: iced::widget::button::Status) -> butt
     let radius = 10.0;
     style.border.radius = Radius::from(radius);
     style
+}
+
+pub enum ColorType {
+    Danger,
+    Primary,
+    Succes,
+    Secondary,
+    Standard,
+}
+pub fn styled_menu_button(
+    icon: Bootstrap,
+    txt: &str,
+    msg: Message,
+    color: ColorType,
+) -> Element<Message> {
+    let c = match color {
+        ColorType::Danger => text_fg_danger,
+        ColorType::Primary => text_fg,
+        ColorType::Succes => text_fg_succes,
+        ColorType::Secondary => text_fg_sec,
+        ColorType::Standard => text::base,
+    };
+    button(
+        row![
+            text(icon_to_string(icon)).font(ICON_FONT).style(c).size(22),
+            text(txt).style(c).size(20)
+        ]
+        .spacing(5)
+        .align_y(Alignment::Center),
+    )
+    .on_press(msg)
+    .style(button::text)
+    .into()
+}
+
+pub fn styled_button(
+    icon: Bootstrap,
+    txt: &str,
+    msg: Message,
+    color: ColorType,
+) -> Element<Message> {
+    let col = match color {
+        ColorType::Danger => button::danger,
+        ColorType::Primary => button::primary,
+        ColorType::Succes => button::success,
+        ColorType::Secondary => button::secondary,
+        ColorType::Standard => button::primary,
+    };
+    button(
+        row![text(icon_to_string(icon)).font(ICON_FONT), text(txt)]
+            .spacing(5)
+            .align_y(Alignment::Center),
+    )
+    .on_press(msg)
+    .style(col)
+    .into()
 }

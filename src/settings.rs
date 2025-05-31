@@ -1,6 +1,9 @@
 use crate::bootstrap::*;
 use crate::themes;
+use crate::themes::styled_button;
+use crate::themes::ColorType;
 use crate::{db, App, Message, ViewControl};
+use chrono::prelude::*;
 use iced::event::{self, Event};
 use iced::widget::{
     button, checkbox, column, combo_box, container, horizontal_rule, horizontal_space, pick_list,
@@ -49,6 +52,12 @@ pub fn settings_view(app: &App) -> Element<Message> {
                 "Working dir:  {}",
                 std::env::current_dir().unwrap().display()
             )),
+            styled_button(
+                Bootstrap::FileEarmarkArrowDownFill,
+                "Neues Backup",
+                Message::BackupDB,
+                ColorType::Succes
+            )
         ]
         .spacing(5)
         .padding(20),

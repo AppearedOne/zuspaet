@@ -1,4 +1,7 @@
-use crate::time::{self, get_today};
+use crate::{
+    stats::Ranking,
+    time::{self, get_today},
+};
 use chrono::{NaiveDate, NaiveTime};
 use serde_derive::*;
 use std::io::{self, Write};
@@ -63,10 +66,46 @@ impl DataBase {
         file.write(json_db.as_bytes())?;
         Ok(())
     }
-    pub fn ranking_vec(&self) -> Vec<(Class, i32, u32)> {
-        let mut tupples: Vec<(Class, i32, u32)> = Class::all()
+
+    // Vec<Subject, Number of lates, Sum of lates, Percentage
+    pub fn ranking_vec_lesson(&self, rank: Option<Ranking>) -> Vec<(Lesson, i32, u32, u32)> {
+        let mut tupples: Vec<(Lesson, i32, u32, u32)> = Lesson::all()
             .into_iter()
-            .map(|n: Class| (n.clone(), 0, self.sum_person(n)))
+            .map(|n: Lesson| (n.clone(), 0, self.sum_lesson(n), 0))
+            .collect();
+        for entry in &self.data {
+            for t in &mut tupples {
+                if entry.lesson == t.0 {
+                    t.1 += 1;
+                }
+            }
+        }
+        for entry in &mut tupples {
+            let percent = (entry.1 as f32 / self.data.len() as f32 * 100.0).round();
+            entry.3 = percent as u32;
+        }
+        match rank {
+            Some(ranking) => match ranking {
+                Ranking::Number => {
+                    tupples.sort_by(|e1, e2| e2.1.cmp(&e1.1));
+                }
+
+                Ranking::Sum => {
+                    tupples.sort_by(|e1, e2| e2.2.cmp(&e1.2));
+                }
+            },
+            None => {
+                tupples.sort_by(|e1, e2| e2.1.cmp(&e1.1));
+            }
+        }
+        tupples
+    }
+
+    // Vec<Person, Number of lates, Sum of lates, Percentage
+    pub fn ranking_vec(&self, rank: Option<Ranking>) -> Vec<(Class, i32, u32, u32)> {
+        let mut tupples: Vec<(Class, i32, u32, u32)> = Class::all()
+            .into_iter()
+            .map(|n: Class| (n.clone(), 0, self.sum_person(n), 0))
             .collect();
         for entry in &self.data {
             for t in &mut tupples {
@@ -75,7 +114,24 @@ impl DataBase {
                 }
             }
         }
-        tupples.sort_by(|e1, e2| e2.1.cmp(&e1.1));
+        for entry in &mut tupples {
+            let percent = (entry.1 as f32 / self.data.len() as f32 * 100.0).round();
+            entry.3 = percent as u32;
+        }
+        match rank {
+            Some(ranking) => match ranking {
+                Ranking::Number => {
+                    tupples.sort_by(|e1, e2| e2.1.cmp(&e1.1));
+                }
+
+                Ranking::Sum => {
+                    tupples.sort_by(|e1, e2| e2.2.cmp(&e1.2));
+                }
+            },
+            None => {
+                tupples.sort_by(|e1, e2| e2.1.cmp(&e1.1));
+            }
+        }
         tupples
     }
 
@@ -113,19 +169,15 @@ impl DataBase {
             .map(|x| x.delay_min)
             .sum()
     }
-    pub fn ranking_vec_lesson(&self) -> Vec<(Lesson, i32)> {
-        let mut tupples: Vec<(Lesson, i32)> =
-            Lesson::all().into_iter().map(|n: Lesson| (n, 0)).collect();
-        for entry in &self.data {
-            for t in &mut tupples {
-                if entry.lesson == t.0 {
-                    t.1 += 1;
-                }
-            }
-        }
-        tupples.sort_by(|e1, e2| e2.1.cmp(&e1.1));
-        tupples
+
+    fn sum_lesson(&self, lesson: Lesson) -> u32 {
+        self.data
+            .iter()
+            .filter(|x| x.lesson == lesson)
+            .map(|x| x.delay_min)
+            .sum()
     }
+
     /*pub fn average_delay_time(&self) -> Vec<(Lesson, i32)> {
         let mut tupples: Vec<(Lesson, i32, i32)> = Lesson::all()
             .into_iter()

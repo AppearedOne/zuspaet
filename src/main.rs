@@ -1,4 +1,6 @@
-use chrono::Datelike;
+#![windows_subsystem = "windows"]
+
+use chrono::{Datelike, Local};
 use iced::event::{self, Event};
 use iced::widget::{
     button, checkbox, column, combo_box, container, horizontal_rule, horizontal_space, pick_list,
@@ -16,7 +18,8 @@ pub mod settings;
 pub mod stats;
 pub mod time;
 
-use db::{Class, DataBase, Lesson};
+use db::{Class, DataBase, DataBaseError, Lesson};
+use stats::{update_stats, StatState, StatsMessage};
 
 //#[cfg(not(target_arch = "wasm32"))]
 //#[tokio::main]
@@ -72,6 +75,8 @@ pub struct App {
     status_text: String,
     theme_state: combo_box::State<Theme>,
     selected_theme: Option<Theme>,
+
+    stats: StatState,
 }
 
 #[derive(Debug, Clone)]
@@ -94,6 +99,10 @@ pub enum Message {
     Edit,
     ThemeSelected(Theme),
     SettingsLoaded(settings::Settings),
+    Stats(StatsMessage),
+    SaveExit,
+    BackupDB,
+    BackedUpDB(Result<(), DataBaseError>),
 }
 
 impl App {
@@ -110,6 +119,7 @@ impl App {
                 status_text: String::new(),
                 theme_state: combo_box::State::new(Theme::ALL.to_vec()),
                 selected_theme: None,
+                stats: StatState::new(),
             },
             Task::none(),
         )
@@ -129,6 +139,16 @@ impl App {
                 }
                 Err(_) => self.status_text = "Couldn't save data, not exiting".to_string(),
             },
+            Message::SaveExit => {
+                let mut sets = settings::Settings::new();
+                match self.selected_theme.clone() {
+                    Some(theme) => {
+                        sets.theme = theme.to_string();
+                    }
+                    None => (),
+                }
+                return Task::perform(save_all(self.db.clone(), sets), Message::Exit);
+            }
             Message::EventOccurred(event) => {
                 if let Event::Window(window::Event::CloseRequested) = event {
                     let mut sets = settings::Settings::new();
@@ -205,6 +225,17 @@ impl App {
             Message::SettingsLoaded(sets) => {
                 self.selected_theme = settings::string_to_theme(&sets.theme);
             }
+            Message::Stats(t) => return update_stats(self, t),
+            Message::BackupDB => {
+                let name = Local::now().to_string();
+                return Task::perform(
+                    self.db
+                        .clone()
+                        .save_file(format!("{}-bak.json", name).to_string()),
+                    Message::BackedUpDB,
+                );
+            }
+            Message::BackedUpDB(_) => (),
         }
         Task::none()
     }
@@ -340,15 +371,33 @@ impl App {
                         )
                         .on_press(Message::GoView(ViewControl::STATS))
                         .style(button::text),
+                        button(
+                            row![
+                                text(icon_to_string(Bootstrap::GearFill))
+                                    .font(ICON_FONT)
+                                    .size(22)
+                                    .style(themes::text_fg),
+                                text("Einstellungen").style(themes::text_fg).size(20)
+                            ]
+                            .spacing(5)
+                            .align_y(Alignment::Center)
+                        )
+                        .on_press(Message::GoView(ViewControl::SETTINGS))
+                        .style(button::text),
                         horizontal_space(),
                         button(
-                            text(icon_to_string(Bootstrap::GearFill))
-                                .font(ICON_FONT)
-                                .size(22)
-                                .style(themes::text_fg)
+                            row![
+                                text(icon_to_string(Bootstrap::BoxArrowRight))
+                                    .font(ICON_FONT)
+                                    .size(22)
+                                    .style(themes::text_fg_danger),
+                                text("Kündigung").style(themes::text_fg_danger).size(20)
+                            ]
+                            .spacing(5)
+                            .align_y(Alignment::Center)
                         )
+                        .on_press(Message::SaveExit)
                         .style(button::text)
-                        .on_press(Message::GoView(ViewControl::SETTINGS))
                     ]
                     .padding(5)
                     .spacing(5),
