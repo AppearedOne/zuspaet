@@ -65,21 +65,6 @@ impl std::fmt::Display for Ranking {
 }
 
 pub fn stats_view(app: &App) -> Element<Message> {
-    let avg = text(format!("Durchschnitt: {}", app.db.average_delay()));
-    let min = text(format!(
-        "Minimum: {}",
-        app.db.data.iter().map(|x| x.delay_min).min().unwrap()
-    ));
-    let sum_min = text(format!("Summe (min): {}", app.db.sum_min()));
-    let max = text(format!(
-        "Maximum: {}",
-        app.db.data.iter().map(|x| x.delay_min).max().unwrap()
-    ));
-    let total = text(format!("Total: {}", app.db.data.len()));
-    let first_percent = text(format!(
-        "Erste Lektion des Tages: {}%",
-        app.db.get_percent_first_lesson()
-    ));
     row![column![
         row![
             button(
@@ -104,7 +89,7 @@ pub fn stats_view(app: &App) -> Element<Message> {
             //vertical_rule(1),
             ranking_lesson(app),
             //vertical_rule(1),
-            column![avg, min, max, total, first_percent, sum_min].spacing(10)
+            funfacts(app),
         ]
         .spacing(5)
         .align_y(Alignment::Start)
@@ -113,6 +98,44 @@ pub fn stats_view(app: &App) -> Element<Message> {
     .width(Length::Fill)
     .align_x(Alignment::Center)]
     .height(Length::Fill)
+    .into()
+}
+
+fn funfacts(app: &App) -> Element<Message> {
+    let avg = text(format!("Durchschnitt: {}", app.db.average_delay()));
+    let min = text(format!(
+        "Minimum: {}",
+        app.db.data.iter().map(|x| x.delay_min).min().unwrap()
+    ));
+    let sum_min = text(format!("Summe: {}min", app.db.sum_min()));
+    let max = text(format!(
+        "Maximum: {}",
+        app.db.data.iter().map(|x| x.delay_min).max().unwrap()
+    ));
+    let total = text(format!("Total: {}", app.db.data.len()));
+    let first_percent = text(format!(
+        "Erste Lektion des Tages: {}%",
+        app.db.get_percent_first_lesson()
+    ));
+    let penalties = text(format!(
+        "Theoretische Strafstunden: {}",
+        app.db.total_penalties()
+    ));
+    column![
+        row![
+            text("Andere Zahlen").style(themes::text_fg).size(22),
+            horizontal_space()
+        ],
+        avg,
+        min,
+        max,
+        total,
+        first_percent,
+        sum_min,
+        penalties
+    ]
+    .spacing(10)
+    .padding(5)
     .into()
 }
 
@@ -152,13 +175,15 @@ fn ranking_lesson(app: &App) -> Element<Message> {
         .into();
     container(column![
         row![
-            text("Nach Fach").size(22).style(themes::text_fg),
+            text("Ranking nach Fach").size(22).style(themes::text_fg),
             horizontal_space(),
             ranking_subject
         ]
         .spacing(5)
         .align_y(Alignment::Center),
-        scrollable(ranking).style(themes::scrollbar_invis)
+        scrollable(ranking)
+            .style(themes::scrollbar_invis)
+            .style(scrollable::default)
     ])
     .into()
 }
@@ -199,7 +224,7 @@ fn ranking_person(app: &App) -> Element<Message> {
         .into();
     container(column![
         row![
-            text("Nach Person").size(22).style(themes::text_fg),
+            text("Ranking Nach Person").size(22).style(themes::text_fg),
             horizontal_space(),
             ranking_person
         ]

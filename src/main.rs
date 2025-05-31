@@ -14,6 +14,7 @@ pub mod bootstrap;
 pub mod themes;
 use bootstrap::*;
 pub mod db;
+pub mod new;
 pub mod settings;
 pub mod stats;
 pub mod time;
@@ -241,65 +242,8 @@ impl App {
     }
 
     fn view(&self) -> Element<Message> {
-        let s = "Erste Lektion des Tages?".to_string();
         match self.view {
-            ViewControl::ADD => row![column![
-                text("Neuer EINTRAG!!! (wooowww)").size(30),
-                horizontal_rule(1),
-                combo_box(
-                    &self.combo,
-                    "Niemand?",
-                    self.sel_pers.as_ref(),
-                    Message::SelectPerson
-                ),
-                combo_box(
-                    &self.combo2,
-                    "Keine?",
-                    self.sel_lesson.as_ref(),
-                    Message::SelectLesson
-                ),
-                row![
-                    text(format!("Lektionsstart: {}", self.add_entry.lesson_time)),
-                    button("-").on_press(Message::LastLessonTime),
-                    button("+").on_press(Message::NextLessonTime)
-                ]
-                .spacing(5)
-                .align_y(Alignment::Center),
-                toggler(self.add_entry.first_lesson)
-                    .on_toggle(Message::IsFirst)
-                    .label(s),
-                row![
-                    text(format!("Verspätung: {}", self.add_entry.delay_min)),
-                    slider(
-                        std::ops::RangeInclusive::new(0, 45),
-                        self.add_entry.delay_min,
-                        Message::DelayE
-                    )
-                ]
-                .spacing(5)
-                .align_y(Alignment::Center),
-                row![
-                    text(format!("{},", self.add_entry.date)),
-                    text(format!("{}", self.add_entry.date.weekday())),
-                    button("-").on_press(Message::RemDay),
-                    button("+").on_press(Message::AddDay)
-                ]
-                .spacing(5)
-                .align_y(Alignment::Center),
-                row![
-                    button("Hinzufügen").on_press(Message::AddEntry),
-                    button("Doch nicht").on_press(Message::GoView(ViewControl::MAIN))
-                ]
-                .spacing(5)
-                .align_y(Alignment::Center),
-            ]
-            .width(Length::Fill)
-            .spacing(5)
-            .align_x(Alignment::Center),]
-            .align_y(Alignment::Center)
-            .width(Length::Fill)
-            .spacing(5)
-            .into(),
+            ViewControl::ADD => new::new_entry_view(&self),
             ViewControl::MAIN => {
                 let mut lates = column![];
                 for entry in &self.db.data {

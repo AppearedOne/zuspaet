@@ -178,6 +178,26 @@ impl DataBase {
             .sum()
     }
 
+    pub fn penalties_person(&self, person: Class) -> u32 {
+        self.entries_person_num(person) / 3
+    }
+    pub fn total_penalties(&self) -> u32 {
+        Class::all()
+            .into_iter()
+            .map(|x| self.penalties_person(x))
+            .sum()
+    }
+
+    fn entries_person_num(&self, person: Class) -> u32 {
+        let mut n = 0;
+        for entry in &self.data {
+            if entry.person == person {
+                n += 1;
+            }
+        }
+        n
+    }
+
     /*pub fn average_delay_time(&self) -> Vec<(Lesson, i32)> {
         let mut tupples: Vec<(Lesson, i32, i32)> = Lesson::all()
             .into_iter()
