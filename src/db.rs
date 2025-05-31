@@ -63,9 +63,11 @@ impl DataBase {
         file.write(json_db.as_bytes())?;
         Ok(())
     }
-    pub fn ranking_vec(&self) -> Vec<(Class, i32)> {
-        let mut tupples: Vec<(Class, i32)> =
-            Class::all().into_iter().map(|n: Class| (n, 0)).collect();
+    pub fn ranking_vec(&self) -> Vec<(Class, i32, u32)> {
+        let mut tupples: Vec<(Class, i32, u32)> = Class::all()
+            .into_iter()
+            .map(|n: Class| (n.clone(), 0, self.sum_person(n)))
+            .collect();
         for entry in &self.data {
             for t in &mut tupples {
                 if entry.person == t.0 {
@@ -103,6 +105,13 @@ impl DataBase {
         }
         let sum: u32 = self.data.iter().map(|x| x.delay_min).sum();
         return sum;
+    }
+    fn sum_person(&self, person: Class) -> u32 {
+        self.data
+            .iter()
+            .filter(|x| x.person == person)
+            .map(|x| x.delay_min)
+            .sum()
     }
     pub fn ranking_vec_lesson(&self) -> Vec<(Lesson, i32)> {
         let mut tupples: Vec<(Lesson, i32)> =

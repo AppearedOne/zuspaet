@@ -8,6 +8,9 @@ use iced::widget::{
 use iced::window;
 use iced::{alignment, Alignment, Element, Font, Length, Padding, Subscription, Task, Theme};
 
+pub mod bootstrap;
+pub mod themes;
+use bootstrap::*;
 pub mod db;
 pub mod settings;
 pub mod stats;
@@ -30,6 +33,7 @@ fn main() -> iced::Result {
         .theme(App::theme)
         .subscription(App::subscription)
         .exit_on_close_request(false)
+        .font(bootstrap::ICON_FONT_BYTES)
         .run_with(|| {
             (
                 App::new().0,
@@ -42,6 +46,9 @@ fn main() -> iced::Result {
             )
         })
 }
+
+const ICON_FONT: Font = Font::with_name("bootstrap-icons");
+
 async fn save_all(db: db::DataBase, sets: settings::Settings) -> Result<(), db::DataBaseError> {
     settings::save_to_file(sets, "settings.json").await;
     return db.save_file("db.json".to_string()).await;
@@ -284,31 +291,71 @@ impl App {
                             ]
                             .padding(3),
                             column![
-                                button("Löschen").on_press(Message::DLEntry(entry.clone())),
-                                button("Bearbeiten").on_press(Message::Edit)
+                                button(
+                                    text(icon_to_string(Bootstrap::TrashthreeFill))
+                                        .font(ICON_FONT)
+                                        .size(22)
+                                        .style(themes::text_fg_danger)
+                                )
+                                .on_press(Message::DLEntry(entry.clone()))
+                                .style(button::text),
+                                //button("Bearbeiten").on_press(Message::Edit)
                             ]
                             .align_x(Alignment::Center)
                             .spacing(5)
                             .padding(5),
                         ]
+                        .spacing(5)
                         .padding(20)
                         .align_y(Alignment::Center),
                         horizontal_rule(0),
                     ]);
                 }
                 row![column![
-                    text("Verspätungsmanager4000 Ultra Pro Max").size(20),
+                    //text("Verspätungsmanager4000 Ultra Pro Max").size(20),
                     //text(format!("{}", std::env::current_dir().unwrap().display())),
                     text(self.status_text.clone()).style(text::danger),
                     row![
-                        button("Neuer Eintrag").on_press(Message::Add),
-                        button("Statistik").on_press(Message::GoView(ViewControl::STATS)),
-                        button("Einstellungen").on_press(Message::GoView(ViewControl::SETTINGS))
+                        button(
+                            row![
+                                text(icon_to_string(Bootstrap::PlusSquareFill))
+                                    .font(ICON_FONT)
+                                    .size(22)
+                                    .style(themes::text_fg),
+                                text("Neuer Eintrag").style(themes::text_fg).size(20)
+                            ]
+                            .spacing(5)
+                            .align_y(Alignment::Center)
+                        )
+                        .style(button::text)
+                        .on_press(Message::Add),
+                        button(
+                            row![
+                                text(icon_to_string(Bootstrap::BarChartFill))
+                                    .font(ICON_FONT)
+                                    .size(22)
+                                    .style(themes::text_fg),
+                                text("Statistik").style(themes::text_fg).size(20)
+                            ]
+                            .spacing(5)
+                            .align_y(Alignment::Center)
+                        )
+                        .on_press(Message::GoView(ViewControl::STATS))
+                        .style(button::text),
+                        horizontal_space(),
+                        button(
+                            text(icon_to_string(Bootstrap::GearFill))
+                                .font(ICON_FONT)
+                                .size(22)
+                                .style(themes::text_fg)
+                        )
+                        .style(button::text)
+                        .on_press(Message::GoView(ViewControl::SETTINGS))
                     ]
                     .padding(5)
                     .spacing(5),
                     horizontal_rule(0),
-                    scrollable(lates),
+                    scrollable(lates).style(themes::scrollbar_invis),
                 ]
                 .width(Length::Fill)
                 .align_x(alignment::Alignment::Center),]

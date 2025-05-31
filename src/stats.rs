@@ -1,5 +1,6 @@
-use crate::{db, App, Message, ViewControl};
-use iced::event::{self, Event};
+use crate::bootstrap::*;
+use crate::themes;
+use crate::{App, Message, ViewControl};
 use iced::widget::{
     button, checkbox, column, combo_box, container, horizontal_rule, horizontal_space, pick_list,
     row, scrollable, slider, stack, text, text_input, toggler, tooltip, vertical_rule,
@@ -17,7 +18,8 @@ pub fn stats_view(app: &App) -> Element<Message> {
                 text(format!("{}.", i + 1)),
                 text(p.0.to_string()),
                 text(p.1.to_string()),
-                text(format!("- {}%", percent))
+                text(format!("- {}%", percent)),
+                text(format!(" - {} min", p.2.to_string())),
             ]
             .spacing(5)
             .align_y(Alignment::Start),
@@ -49,12 +51,29 @@ pub fn stats_view(app: &App) -> Element<Message> {
         app.db.data.iter().map(|x| x.delay_min).max().unwrap()
     ));
     let total = text(format!("Total: {}", app.db.data.len()));
-    let first_percent = (text(format!(
+    let first_percent = text(format!(
         "Erste Lektion des Tages: {}%",
         app.db.get_percent_first_lesson()
-    )));
+    ));
     row![column![
-        button("Zurück").on_press(Message::GoView(ViewControl::MAIN)),
+        row![
+            button(
+                row![
+                    text(icon_to_string(Bootstrap::ArrowLeftSquareFill))
+                        .font(ICON_FONT)
+                        .style(themes::text_fg)
+                        .size(22),
+                    text("Zurück").style(themes::text_fg).size(20)
+                ]
+                .spacing(5)
+                .align_y(Alignment::Center)
+            )
+            .on_press(Message::GoView(ViewControl::MAIN))
+            .style(button::text),
+            horizontal_space()
+        ],
+        horizontal_rule(0),
+        horizontal_space().height(5),
         row![
             ranking.align_x(Alignment::Start).spacing(5),
             ranking_l.align_x(Alignment::Start).spacing(5),
