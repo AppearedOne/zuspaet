@@ -32,7 +32,7 @@ pub fn settings_view(app: &App) -> Element<Message> {
                 .style(button::text),
                 horizontal_space()
             ],
-            horizontal_rule(0),
+            horizontal_rule(1),
             vertical_space().height(5),
             row![
                 text("Theme:"),

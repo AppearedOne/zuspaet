@@ -22,19 +22,8 @@ use db::{Class, DataBase, Lesson};
 //#[tokio::main]
 //async fn main() -> iced::Result {
 fn main() -> iced::Result {
-    /*std::env::set_current_dir(
-       std::env::current_exe()
-            .expect("Couldnt get exec dir")
-            .parent()
-            .unwrap(),
-    )
-    .expect("didnt work");*/
-    iced::application(App::title, App::update, App::view)
-        .theme(App::theme)
-        .subscription(App::subscription)
-        .exit_on_close_request(false)
-        .font(bootstrap::ICON_FONT_BYTES)
-        .run_with(|| {
+    iced::application(
+        || {
             (
                 App::new().0,
                 Task::perform(db::DataBase::load_file("db.json"), Message::DBLoaded).chain(
@@ -44,7 +33,16 @@ fn main() -> iced::Result {
                     ),
                 ),
             )
-        })
+        },
+        App::update,
+        App::view,
+    )
+    .theme(App::theme)
+    .subscription(App::subscription)
+    .exit_on_close_request(false)
+    .font(bootstrap::ICON_FONT_BYTES)
+    .title(App::title)
+    .run()
 }
 
 const ICON_FONT: Font = Font::with_name("bootstrap-icons");
@@ -216,7 +214,7 @@ impl App {
         match self.view {
             ViewControl::ADD => row![column![
                 text("Neuer EINTRAG!!! (wooowww)").size(30),
-                horizontal_rule(0),
+                horizontal_rule(1),
                 combo_box(
                     &self.combo,
                     "Niemand?",
@@ -308,7 +306,7 @@ impl App {
                         .spacing(5)
                         .padding(20)
                         .align_y(Alignment::Center),
-                        horizontal_rule(0),
+                        horizontal_rule(1),
                     ]);
                 }
                 row![column![
@@ -354,7 +352,7 @@ impl App {
                     ]
                     .padding(5)
                     .spacing(5),
-                    horizontal_rule(0),
+                    horizontal_rule(1),
                     scrollable(lates).style(themes::scrollbar_invis),
                 ]
                 .width(Length::Fill)

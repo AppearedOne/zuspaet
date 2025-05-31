@@ -79,7 +79,10 @@ pub fn scrollbar_invis(theme: &Theme, status: Status) -> Style {
     };
 
     match status {
-        Status::Active => Style {
+        Status::Active {
+            is_horizontal_scrollbar_disabled,
+            is_vertical_scrollbar_disabled,
+        } => Style {
             container: container::Style::default(),
             vertical_rail: scrollbar,
             horizontal_rail: scrollbar,
@@ -88,6 +91,8 @@ pub fn scrollbar_invis(theme: &Theme, status: Status) -> Style {
         Status::Hovered {
             is_horizontal_scrollbar_hovered,
             is_vertical_scrollbar_hovered,
+            is_horizontal_scrollbar_disabled,
+            is_vertical_scrollbar_disabled,
         } => {
             let hovered_scrollbar = Rail {
                 scroller: Scroller {
@@ -115,6 +120,8 @@ pub fn scrollbar_invis(theme: &Theme, status: Status) -> Style {
         Status::Dragged {
             is_horizontal_scrollbar_dragged,
             is_vertical_scrollbar_dragged,
+            is_horizontal_scrollbar_disabled,
+            is_vertical_scrollbar_disabled,
         } => {
             let dragged_scrollbar = Rail {
                 scroller: Scroller {

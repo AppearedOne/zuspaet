@@ -72,7 +72,7 @@ pub fn stats_view(app: &App) -> Element<Message> {
             .style(button::text),
             horizontal_space()
         ],
-        horizontal_rule(0),
+        horizontal_rule(1),
         horizontal_space().height(5),
         row![
             ranking.align_x(Alignment::Start).spacing(5),
