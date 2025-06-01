@@ -20,6 +20,36 @@ impl From<serde_json::Error> for DataBaseError {
     }
 }
 
+pub struct ProfileStats {
+    pub person: Class,
+    pub num: u32,
+    pub avg_min: f32,
+    pub percent: f32,
+    pub min: u32,
+    pub max: u32,
+    pub latest: Option<Entry>,
+    pub theo_penalties: u32,
+    pub sum: u32,
+    pub first_lesson_percent: f32,
+}
+
+impl ProfileStats {
+    pub fn empty(p: Class) -> Self {
+        ProfileStats {
+            person: p,
+            num: 0,
+            avg_min: 0.0,
+            percent: 0.0,
+            min: 0,
+            max: 0,
+            latest: None,
+            theo_penalties: 0,
+            sum: 0,
+            first_lesson_percent: 0.0,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct Entry {
     pub person: Class,
@@ -221,6 +251,42 @@ impl DataBase {
         }
         return tupples.into_iter().map(|n: Lesson, m, i| (n, m));
     }*/
+    pub fn get_profile_stats(&self, person: Class) -> ProfileStats {
+        let mut stats = ProfileStats::empty(person.clone());
+        stats.sum = self.sum_person(person.clone());
+        stats.num = self.entries_person_num(person.clone());
+        stats.theo_penalties = self.penalties_person(person.clone());
+        let mut num_first = 0;
+        for entry in &self.data {
+            if entry.person == person {
+                if entry.delay_min < stats.min || stats.min == 0 {
+                    stats.min = entry.delay_min;
+                }
+                if entry.delay_min > stats.max {
+                    stats.max = entry.delay_min;
+                }
+                if entry.first_lesson {
+                    num_first += 1;
+                }
+                match stats.latest {
+                    None => stats.latest = Some(entry.clone()),
+                    Some(ref e) => {
+                        if e.date < entry.date {
+                            stats.latest = Some(entry.clone());
+                        } else if e.date == entry.date {
+                            if e.lesson_time < entry.lesson_time {
+                                stats.latest = Some(entry.clone());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        stats.first_lesson_percent = num_first as f32 / stats.num as f32 * 100.0;
+        stats.percent = (stats.num as f32 / self.data.len() as f32) * 100.0;
+        stats.avg_min = stats.sum as f32 / stats.num as f32;
+        stats
+    }
 }
 
 impl std::fmt::Display for Class {
@@ -259,7 +325,7 @@ pub enum Class {
 
 impl Class {
     pub fn all() -> Vec<Class> {
-        vec![
+        let mut a = vec![
             Class::Nicole,
             Class::Emily,
             Class::Leander,
@@ -284,7 +350,9 @@ impl Class {
             Class::Luis,
             Class::Mia,
             Class::Marie,
-        ]
+        ];
+        a.sort_by(|a, b| a.to_string().cmp(&b.to_string()));
+        a
     }
 }
 
