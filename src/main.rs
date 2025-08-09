@@ -11,12 +11,17 @@ use iced::window;
 use iced::{alignment, Alignment, Element, Font, Length, Padding, Subscription, Task, Theme};
 
 pub mod bootstrap;
-pub mod themes;
 use bootstrap::*;
+pub mod absences;
+pub mod toast;
+use toast::*;
 pub mod db;
+pub mod list;
+pub mod menu;
 pub mod new;
 pub mod settings;
 pub mod stats;
+pub mod themes;
 pub mod time;
 
 use db::{Class, DataBase, DataBaseError, Lesson};
@@ -30,12 +35,21 @@ fn main() -> iced::Result {
         || {
             (
                 App::new().0,
-                Task::perform(db::DataBase::load_file("db.json"), Message::DBLoaded).chain(
-                    Task::perform(
-                        settings::load_from_file("settings.json"),
-                        Message::SettingsLoaded,
-                    ),
-                ),
+                Task::perform(
+                    db::DataBase::load_file("db.json"),
+                    |r: Result<DataBase, DataBaseError>| match r {
+                        Ok(db) => Message::DBLoaded(db),
+                        Err(_) => Message::Notify(Toast::new(
+                            "Error",
+                            "DB nix geladen oopsiwoopsy",
+                            Status::Danger,
+                        )),
+                    },
+                )
+                .chain(Task::perform(
+                    settings::load_from_file("settings.json"),
+                    Message::SettingsLoaded,
+                )),
             )
         },
         App::update,
@@ -59,15 +73,18 @@ async fn save_all(db: db::DataBase, sets: settings::Settings) -> Result<(), db::
 #[derive(Debug, Clone)]
 pub enum ViewControl {
     ADD,
-    MAIN,
+    LISTVIEW,
     STATS,
     SETTINGS,
+    MENU,
+    ABSENCES,
 }
 
 pub struct App {
     add_entry: db::Entry,
     db: db::DataBase,
     view: ViewControl,
+    view_origin: ViewControl,
     combo: combo_box::State<Class>,
     sel_pers: Option<Class>,
 
@@ -78,6 +95,14 @@ pub struct App {
     selected_theme: Option<Theme>,
 
     stats: StatState,
+
+    toasts: Vec<Toast>,
+
+    abs: db::LessonAbs,
+
+    menu: menu::MenuState,
+
+    list: list::ListState,
 }
 
 #[derive(Debug, Clone)]
@@ -86,6 +111,7 @@ pub enum Message {
     EventOccurred(Event),
     DBLoaded(DataBase),
     GoView(ViewControl),
+    BackView,
     Add,
     AddEntry,
     SelectPerson(Class),
@@ -103,7 +129,14 @@ pub enum Message {
     Stats(StatsMessage),
     SaveExit,
     BackupDB,
-    BackedUpDB(Result<(), DataBaseError>),
+    DeleteDB,
+    SaveDB,
+    Notify(Toast),
+    Nothing,
+    CloseToast(usize),
+    Abs(absences::AbsMsg),
+    MainMenu(menu::MenuMsg),
+    List(list::ListMsg),
 }
 
 impl App {
@@ -112,7 +145,8 @@ impl App {
             Self {
                 add_entry: db::Entry::empty(),
                 db: db::DataBase::empty(),
-                view: ViewControl::MAIN,
+                view: ViewControl::MENU,
+                view_origin: ViewControl::MENU,
                 combo: combo_box::State::new(db::Class::all()),
                 sel_pers: None,
                 combo2: combo_box::State::new(db::Lesson::all()),
@@ -121,12 +155,16 @@ impl App {
                 theme_state: combo_box::State::new(Theme::ALL.to_vec()),
                 selected_theme: None,
                 stats: StatState::new(),
+                toasts: vec![],
+                abs: db::LessonAbs::new(),
+                menu: menu::MenuState::new(),
+                list: list::ListState::default(),
             },
             Task::none(),
         )
     }
     fn title(&self) -> String {
-        String::from("Verspätungsmanager4001 Ultra Pro Max")
+        String::from("Verspätungsmanager4002 Ultra Pro Max")
     }
     fn subscription(&self) -> Subscription<Message> {
         event::listen().map(Message::EventOccurred)
@@ -169,9 +207,14 @@ impl App {
             }
             Message::DBLoaded(d) => {
                 self.db = d;
+                self.abs = db::LessonAbs::new_smart(&self.db.absences);
             }
             Message::GoView(v) => {
+                self.view_origin = self.view.clone();
                 self.view = v;
+            }
+            Message::BackView => {
+                self.view = self.view_origin.clone();
             }
             Message::Add => {
                 self.add_entry.lesson_time = time::get_last_lesson();
@@ -187,7 +230,7 @@ impl App {
                 self.sel_lesson = Some(l);
                 println!("{}", self.add_entry.lesson_time);
             }
-            Message::IsFirst(b) => {
+            Message::IsFirst(_) => {
                 self.add_entry.first_lesson = !self.add_entry.first_lesson;
             }
             Message::DelayE(d) => {
@@ -195,7 +238,7 @@ impl App {
             }
             Message::AddEntry => {
                 self.db.data.push(self.add_entry.clone());
-                self.view = ViewControl::MAIN;
+                self.view = ViewControl::LISTVIEW;
             }
             Message::AddDay => {
                 self.add_entry.date = self.add_entry.date.succ_opt().expect("Theres no tommorow?");
@@ -233,130 +276,70 @@ impl App {
                     self.db
                         .clone()
                         .save_file(format!("{}-bak.json", name).to_string()),
-                    Message::BackedUpDB,
+                    |r| -> Message {
+                        match r {
+                            Ok(_) => Message::Notify(Toast::new(
+                                "Success",
+                                "Created Backup",
+                                Status::Success,
+                            )),
+                            Err(_) => Message::Notify(Toast::new(
+                                "Error",
+                                "DatabaseError thrown",
+                                Status::Danger,
+                            )),
+                        }
+                    },
                 );
             }
-            Message::BackedUpDB(_) => (),
+            Message::DeleteDB => {
+                self.db = DataBase::empty();
+            }
+            Message::SaveDB => {
+                let mut sets = settings::Settings::new();
+                match self.selected_theme.clone() {
+                    Some(theme) => {
+                        sets.theme = theme.to_string();
+                    }
+                    None => (),
+                }
+                return Task::perform(save_all(self.db.clone(), sets), |r| match r {
+                    Ok(_) => Message::Notify(Toast::new(
+                        "Success",
+                        "DB and Settings saved",
+                        Status::Success,
+                    )),
+                    Err(_) => Message::Notify(Toast::new(
+                        "Failed",
+                        "DB and Settings not saved",
+                        Status::Danger,
+                    )),
+                });
+            }
+            Message::Notify(t) => self.notify(t),
+            Message::CloseToast(index) => {
+                self.toasts.remove(index);
+            }
+            Message::Nothing => (),
+            Message::Abs(msg) => return absences::handle_absences(msg, self),
+            Message::MainMenu(msg) => return menu::update_menu(self, msg),
+            Message::List(msg) => return list::update_list(self, msg),
         }
         Task::none()
     }
 
     fn view(&self) -> Element<Message> {
-        match self.view {
-            ViewControl::ADD => new::new_entry_view(&self),
-            ViewControl::MAIN => {
-                let mut lates = column![];
-                for entry in &self.db.data {
-                    let t = text(entry.person.to_string());
-                    lates = lates.push(column![
-                        row![
-                            t.size(20).style(text::success),
-                            horizontal_space(),
-                            text(entry.lesson.to_string())
-                                .style(|theme: &Theme| text::primary(theme)),
-                            text(format!(" Erste Lektion: {} ", entry.first_lesson)),
-                            text(format!("{} Min", entry.delay_min))
-                                .style(|theme: &Theme| text::primary(theme)),
-                            horizontal_space(),
-                            column![
-                                text(entry.lesson_time.to_string()),
-                                text(entry.date.to_string())
-                            ]
-                            .padding(3),
-                            column![
-                                button(
-                                    text(icon_to_string(Bootstrap::TrashthreeFill))
-                                        .font(ICON_FONT)
-                                        .size(22)
-                                        .style(themes::text_fg_danger)
-                                )
-                                .on_press(Message::DLEntry(entry.clone()))
-                                .style(button::text),
-                                //button("Bearbeiten").on_press(Message::Edit)
-                            ]
-                            .align_x(Alignment::Center)
-                            .spacing(5)
-                            .padding(5),
-                        ]
-                        .spacing(5)
-                        .padding(20)
-                        .align_y(Alignment::Center),
-                        horizontal_rule(1),
-                    ]);
-                }
-                row![column![
-                    //text("Verspätungsmanager4000 Ultra Pro Max").size(20),
-                    //text(format!("{}", std::env::current_dir().unwrap().display())),
-                    text(self.status_text.clone()).style(text::danger),
-                    row![
-                        button(
-                            row![
-                                text(icon_to_string(Bootstrap::PlusSquareFill))
-                                    .font(ICON_FONT)
-                                    .size(22)
-                                    .style(themes::text_fg),
-                                text("Neuer Eintrag").style(themes::text_fg).size(20)
-                            ]
-                            .spacing(5)
-                            .align_y(Alignment::Center)
-                        )
-                        .style(button::text)
-                        .on_press(Message::Add),
-                        button(
-                            row![
-                                text(icon_to_string(Bootstrap::BarChartFill))
-                                    .font(ICON_FONT)
-                                    .size(22)
-                                    .style(themes::text_fg),
-                                text("Statistik").style(themes::text_fg).size(20)
-                            ]
-                            .spacing(5)
-                            .align_y(Alignment::Center)
-                        )
-                        .on_press(Message::GoView(ViewControl::STATS))
-                        .style(button::text),
-                        button(
-                            row![
-                                text(icon_to_string(Bootstrap::GearFill))
-                                    .font(ICON_FONT)
-                                    .size(22)
-                                    .style(themes::text_fg),
-                                text("Einstellungen").style(themes::text_fg).size(20)
-                            ]
-                            .spacing(5)
-                            .align_y(Alignment::Center)
-                        )
-                        .on_press(Message::GoView(ViewControl::SETTINGS))
-                        .style(button::text),
-                        horizontal_space(),
-                        button(
-                            row![
-                                text(icon_to_string(Bootstrap::BoxArrowRight))
-                                    .font(ICON_FONT)
-                                    .size(22)
-                                    .style(themes::text_fg_danger),
-                                text("Kündigung").style(themes::text_fg_danger).size(20)
-                            ]
-                            .spacing(5)
-                            .align_y(Alignment::Center)
-                        )
-                        .on_press(Message::SaveExit)
-                        .style(button::text)
-                    ]
-                    .padding(5)
-                    .spacing(5),
-                    horizontal_rule(1),
-                    scrollable(lates).style(themes::scrollbar_invis),
-                ]
-                .width(Length::Fill)
-                .align_x(alignment::Alignment::Center),]
-                .align_y(Alignment::Center)
-                .width(Length::Fill)
-                .into()
-            }
+        let content = match self.view {
+            ViewControl::ADD => new::new_entry_view(self),
+            ViewControl::LISTVIEW => list::listview(self),
             ViewControl::STATS => stats::stats_view(self),
             ViewControl::SETTINGS => settings::settings_view(self),
-        }
+            ViewControl::MENU => menu::menu_view(self),
+            ViewControl::ABSENCES => absences::absences_view(self),
+        };
+        toast::Manager::new(content, &self.toasts, Message::CloseToast)
+            .timeout(3)
+            .into()
     }
 
     fn theme(&self) -> Theme {
@@ -364,6 +347,11 @@ impl App {
             Some(theme) => theme.clone(),
             None => Theme::KanagawaDragon,
         }
+    }
+
+    pub fn notify(&mut self, t: Toast) {
+        self.toasts.push(t);
+
     }
 }
 impl Default for App {

@@ -28,6 +28,11 @@ impl StatState {
         }
     }
 }
+impl Default for StatState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum StatsMessage {
@@ -265,7 +270,7 @@ pub fn stats_view(app: &App) -> Element<Message> {
                     .spacing(5)
                     .align_y(Alignment::Center)
                 )
-                .on_press(Message::GoView(ViewControl::MAIN))
+                .on_press(Message::BackView)
                 .style(button::text),
                 horizontal_space()
             ],

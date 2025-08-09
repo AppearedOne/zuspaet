@@ -108,7 +108,7 @@ pub fn new_entry_view(app: &App) -> Element<Message> {
                 styled_menu_button(
                     Bootstrap::XSquareFill,
                     "Kündigung",
-                    Message::GoView(ViewControl::MAIN),
+                    Message::BackView,
                     ColorType::Danger
                 ),
             ]

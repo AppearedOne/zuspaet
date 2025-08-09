@@ -1,14 +1,8 @@
 use crate::{Message, ICON_FONT};
 use iced::border::Radius;
 use iced::gradient;
-use iced::widget::{
-    button, column, container, horizontal_space, row, scrollable, scrollable::*, text, text_input,
-    Scrollable,
-};
-use iced::{
-    alignment, executor, Alignment, Background, Border, Color, Element, Executor, Font, Length,
-    Padding, Task, Theme,
-};
+use iced::widget::{button, container, row, scrollable::*, text, text_input};
+use iced::{Alignment, Background, Border, Color, Element, Theme};
 
 use crate::bootstrap::{icon_to_string, Bootstrap};
 
@@ -89,8 +83,8 @@ pub fn scrollbar_invis(theme: &Theme, status: Status) -> Style {
 
     match status {
         Status::Active {
-            is_horizontal_scrollbar_disabled,
-            is_vertical_scrollbar_disabled,
+            is_horizontal_scrollbar_disabled: _,
+            is_vertical_scrollbar_disabled: _,
         } => Style {
             container: container::Style::default(),
             vertical_rail: scrollbar,
@@ -100,8 +94,8 @@ pub fn scrollbar_invis(theme: &Theme, status: Status) -> Style {
         Status::Hovered {
             is_horizontal_scrollbar_hovered,
             is_vertical_scrollbar_hovered,
-            is_horizontal_scrollbar_disabled,
-            is_vertical_scrollbar_disabled,
+            is_horizontal_scrollbar_disabled: _,
+            is_vertical_scrollbar_disabled: _,
         } => {
             let hovered_scrollbar = Rail {
                 scroller: Scroller {
@@ -129,8 +123,8 @@ pub fn scrollbar_invis(theme: &Theme, status: Status) -> Style {
         Status::Dragged {
             is_horizontal_scrollbar_dragged,
             is_vertical_scrollbar_dragged,
-            is_horizontal_scrollbar_disabled,
-            is_vertical_scrollbar_disabled,
+            is_horizontal_scrollbar_disabled: _,
+            is_vertical_scrollbar_disabled: _,
         } => {
             let dragged_scrollbar = Rail {
                 scroller: Scroller {
@@ -219,4 +213,27 @@ pub fn styled_button(
     .on_press(msg)
     .style(col)
     .into()
+}
+
+pub fn round_button_border(theme: &Theme, status: iced::widget::button::Status) -> button::Style {
+    let mut style = button::primary(theme, status);
+    let radius = 10.0;
+    style.border.radius = Radius::from(radius);
+    style.background = None;
+    style.border.width = 2.0;
+    style.border.color = theme.extended_palette().primary.base.color;
+    style.shadow.color = theme.extended_palette().primary.strong.color;
+    style.shadow.offset = iced::Vector::new(3.0, 3.0);
+    style.shadow.blur_radius = 10.0;
+    match status {
+        button::Status::Active => (),
+        button::Status::Hovered => {
+            style.border.color = theme.extended_palette().primary.strong.color
+        }
+        button::Status::Pressed => {
+            style.border.color = theme.extended_palette().primary.strong.color
+        }
+        button::Status::Disabled => (),
+    }
+    style
 }

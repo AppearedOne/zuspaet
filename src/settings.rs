@@ -31,7 +31,7 @@ pub fn settings_view(app: &App) -> Element<Message> {
                     .spacing(5)
                     .align_y(Alignment::Center)
                 )
-                .on_press(Message::GoView(ViewControl::MAIN))
+                .on_press(Message::BackView)
                 .style(button::text),
                 horizontal_space()
             ],
@@ -57,6 +57,18 @@ pub fn settings_view(app: &App) -> Element<Message> {
                 "Neues Backup",
                 Message::BackupDB,
                 ColorType::Succes
+            ),
+            styled_button(
+                Bootstrap::DatabaseFillExclamation,
+                "Verspätungen Zurücksetzen",
+                Message::DeleteDB,
+                ColorType::Danger
+            ),
+            styled_button(
+                Bootstrap::DatabaseFillCheck,
+                "DB und Einstellungen Speichern",
+                Message::SaveDB,
+                ColorType::Succes,
             )
         ]
         .spacing(5)

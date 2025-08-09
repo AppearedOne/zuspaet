@@ -1,3 +1,4 @@
+use crate::App;
 use crate::{
     stats::Ranking,
     time::{self, get_today},
@@ -71,19 +72,69 @@ impl Entry {
         }
     }
 }
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LessonAbs {
+    pub present: Vec<Class>,
+    pub lesson: Lesson,
+    pub lesson_time: NaiveTime,
+    pub first_lesson: bool,
+    pub date: NaiveDate,
+}
+
+impl Default for LessonAbs {
+    fn default() -> Self {
+        LessonAbs::new()
+    }
+}
+impl LessonAbs {
+    pub fn new() -> Self {
+        LessonAbs {
+            present: Class::all(),
+            lesson: Lesson::BG,
+            lesson_time: time::get_last_lesson(),
+            first_lesson: false,
+            date: get_today(),
+        }
+    }
+    pub fn new_smart(absences: &Vec<LessonAbs>) -> Self {
+        let mut l = LessonAbs {
+            present: Class::all(),
+            lesson: Lesson::BG,
+            lesson_time: time::get_last_lesson(),
+            first_lesson: false,
+            date: get_today(),
+        };
+        if absences.len() > 0 {
+            l.present = absences[absences.len() - 1].present.clone();
+            l.lesson = absences[absences.len() - 1].lesson.clone();
+        }
+        l
+    }
+    pub fn toggle_person(&mut self, person: Class) {
+        if self.present.contains(&person) {
+            self.present.retain(|p| *p != person);
+        } else {
+            self.present.push(person);
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DataBase {
     pub data: Vec<Entry>,
+    pub absences: Vec<LessonAbs>,
 }
 impl DataBase {
     pub fn empty() -> DataBase {
-        DataBase { data: vec![] }
+        DataBase {
+            data: vec![],
+            absences: vec![],
+        }
     }
-    pub async fn load_file(path: &str) -> DataBase {
-        let content = std::fs::read_to_string(path).expect("couldnt read");
-        let lib: DataBase = serde_json::from_str(&content).expect("Couldnt parse");
-        lib
+    pub async fn load_file(path: &str) -> Result<DataBase, DataBaseError> {
+        let content = std::fs::read_to_string(path)?;
+        let lib: DataBase = serde_json::from_str(&content)?;
+        Ok(lib)
     }
     pub async fn save_file(self, path: String) -> Result<(), DataBaseError> {
         let json_db = serde_json::to_string_pretty(&self)?;
@@ -93,7 +144,7 @@ impl DataBase {
             _err => (),
         }
         let mut file = std::fs::File::create(&path)?;
-        file.write(json_db.as_bytes())?;
+        file.write_all(json_db.as_bytes())?;
         Ok(())
     }
 
@@ -298,6 +349,7 @@ impl std::fmt::Display for Class {
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub enum Class {
     Nicole,
+    Sophia,
     Emily,
     Leander,
     Suya,
@@ -350,6 +402,7 @@ impl Class {
             Class::Luis,
             Class::Mia,
             Class::Marie,
+            Class::Sophia,
         ];
         a.sort_by(|a, b| a.to_string().cmp(&b.to_string()));
         a
